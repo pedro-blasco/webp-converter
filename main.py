@@ -13,7 +13,7 @@ Image.MAX_IMAGE_PIXELS = 90000000
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-@app.get("/")
+@app.get("/", methods=["GET", "HEAD"])
 async def root():
     return FileResponse('static/index.html')
 
