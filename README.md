@@ -1,6 +1,7 @@
 # WebP Converter
 
 Web-based tool to convert images to WebP format. Built with Python, FastAPI, and Pillow.
+Supports images from all types.
 
 Live: https://convertidor-webp.onrender.com/
 
