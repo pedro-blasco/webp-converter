@@ -7,50 +7,43 @@ from PIL import Image
 
 app = FastAPI(docs_url=None, redoc_url=None)
 
-# 1. CONFIGURACIÓN DE RUTAS ABSOLUTAS
-# Esto asegura que Render encuentre los archivos sin importar la carpeta
+# 1. RUTAS ABSOLUTAS
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 INDEX_PATH = os.path.join(STATIC_DIR, "index.html")
 
-# 2. CONFIGURACIÓN DE SEGURIDAD Y LÍMITES
+# Límites
 MAX_FILE_SIZE_MB = 10
 MAX_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
-Image.MAX_IMAGE_PIXELS = 90000000 
 
-# 3. MONTAR ARCHIVOS ESTÁTICOS (CSS, JS)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# 4. RUTA PRINCIPAL (Acepta GET para usuarios y HEAD para Render)
 @app.api_route("/", methods=["GET", "HEAD"])
 async def root():
     if os.path.exists(INDEX_PATH):
         return FileResponse(INDEX_PATH)
-    return Response(content="Error: index.html not found", status_code=404)
+    return Response(content="index.html not found", status_code=404)
 
-# 5. MOTOR DE CONVERSIÓN
 @app.post("/api/convert")
 async def convert_image(file: UploadFile = File(...)):
-    # Validar tamaño del archivo
-    await file.seek(0, os.SEEK_END)
-    file_size = await file.tell()
-    await file.seek(0)
-
-    if file_size > MAX_BYTES:
-        raise HTTPException(status_code=413, detail="File too large")
-
     try:
-        # Leer imagen
+        # Leemos el contenido del archivo primero
         content = await file.read()
         
-        # Procesar con Pillow
+        # Validamos el tamaño basándonos en los bytes leídos
+        if len(content) > MAX_BYTES:
+            raise HTTPException(status_code=413, detail=f"File too large (Max {MAX_FILE_SIZE_MB}MB)")
+
+        # Intentamos abrir la imagen con Pillow
+        # Usamos un bloque 'with' para asegurar que la memoria se limpie
         with Image.open(io.BytesIO(content)) as img:
-            # Convertir a RGB si es necesario (para evitar errores con transparencias)
-            if img.mode in ("RGBA", "P"):
-                img = img.convert("RGB")
+            
+            # NOTA: Eliminé la conversión forzada a RGB para que 
+            # si subes un PNG transparente, el WebP SIGA siendo transparente.
             
             output_buffer = io.BytesIO()
-            # Guardar como WebP optimizado (rápido)
+            
+            # Guardamos como WebP
             img.save(output_buffer, format="WEBP", quality=80, optimize=True)
             output_buffer.seek(0)
             
@@ -60,5 +53,7 @@ async def convert_image(file: UploadFile = File(...)):
             )
 
     except Exception as e:
-        print(f"Error: {e}")
-        raise HTTPException(status_code=400, detail="Invalid image file")
+        # Esto imprimirá el error real en los logs de Render para que lo veas
+        print(f"DETALLE DEL ERROR: {str(e)}")
+        # Devolvemos el error real al frontend para saber qué pasó
+        raise HTTPException(status_code=400, detail=str(e))
