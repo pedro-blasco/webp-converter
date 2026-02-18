@@ -3,44 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebP Manager</title>
+    <title>WebP Converter</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <button id="themeToggle" class="theme-btn">🌙</button>
     
     <div class="card">
-        <h1>Image Manager</h1>
-        
-        <div class="upload-area" id="dropZone">
-            <span class="upload-text">Drag & Drop or Paste (Ctrl+V)</span>
+        <div class="header">
+            <h1>WebP Converter</h1>
+            <button id="themeToggle" class="icon-btn" title="Toggle Theme">🌙</button>
+        </div>
+
+        <!-- Área de Carga -->
+        <div class="upload-box" id="dropZone">
+            <div class="upload-content">
+                <span class="icon">📂</span>
+                <p>Drag & Drop, Paste (Ctrl+V) or Click</p>
+            </div>
             <input type="file" id="fileInput" accept="image/*" multiple>
         </div>
 
+        <!-- Controles Globales -->
         <div class="controls">
-            <div class="control-row">
-                <label>Quality: <span id="qVal">80</span>%</label>
-                <input type="range" id="quality" min="10" max="100" value="80">
-            </div>
-            <div class="control-row inputs">
-                <input type="number" id="wInput" placeholder="W (px)">
-                <input type="number" id="hInput" placeholder="H (px)">
-            </div>
+            <label>Quality: <span id="qVal">80</span>%</label>
+            <input type="range" id="quality" min="10" max="100" value="80">
         </div>
 
-        <div class="file-list-header">
-            <span id="listCount">0 Files</span>
-            <button id="clearAll" class="btn-text">Clear All</button>
+        <!-- Lista de Archivos (Scrollable) -->
+        <div class="list-header">
+            <span id="fileCount">0 Files</span>
+            <button id="clearAll" class="text-btn">Clear All</button>
+        </div>
+        
+        <div class="file-list" id="fileList">
+            <!-- Aquí se inyectan los archivos con JS -->
+            <div class="empty-state">No files selected</div>
         </div>
 
-        <div class="file-list-container" id="fileList">
-            <!-- Files injected here by JS -->
+        <!-- Botón de Acción -->
+        <div class="actions">
+            <button id="btnConvert" class="btn primary" disabled>Convert All</button>
+            <a id="btnDownload" class="btn success" style="display: none;">Download</a>
         </div>
-
-        <div class="batch-actions">
-            <button id="btnConvertAll" class="btn primary" disabled>Convert All to ZIP</button>
-        </div>
+        
+        <div id="statusMsg" class="status-text"></div>
     </div>
+
     <script src="/static/script.js"></script>
 </body>
 </html>

@@ -19,39 +19,38 @@ async def root():
 @app.post("/api/convert")
 async def convert_images(
     files: List[UploadFile] = File(...),
-    quality: int = Form(80),
-    width: int = Form(0),
-    height: int = Form(0)
+    quality: int = Form(80)
 ):
     try:
         processed = []
         for file in files:
             content = await file.read()
+            # Limite de 20MB por archivo para no saturar
             if len(content) > 20 * 1024 * 1024: continue
             
             with Image.open(io.BytesIO(content)) as img:
-                if width > 0 or height > 0:
-                    w = width if width > 0 else img.width
-                    h = height if height > 0 else img.height
-                    img = img.resize((w, h), Image.Resampling.LANCZOS)
-                
                 out = io.BytesIO()
+                # Convertimos
                 img.save(out, format="WEBP", quality=quality, optimize=True)
-                processed.append(
-                    {
-                        "name": f"{os.path.splitext(file.filename)[0]}.webp",
-                        "data": out.getvalue(),
-                    }
-                    )                
+                
+                # Guardamos resultado en memoria
+                processed.append({
+                    "name": os.path.splitext(file.filename)[0] + ".webp",
+                    "data": out.getvalue()
+                })
 
-        if not processed: raise HTTPException(status_code=400, detail="No valid images")
+        if not processed: 
+            raise HTTPException(status_code=400, detail="No valid images processed")
 
+        # Si es solo 1 imagen, devolvemos la imagen directa
         if len(processed) == 1:
             return Response(content=processed[0]["data"], media_type="image/webp")
         
+        # Si son varias, creamos un ZIP
         zip_buf = io.BytesIO()
         with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            for f in processed: zf.writestr(f["name"], f["data"])
+            for f in processed:
+                zf.writestr(f["name"], f["data"])
             
         return Response(
             content=zip_buf.getvalue(),
@@ -59,7 +58,6 @@ async def convert_images(
             headers={"Content-Disposition": "attachment; filename=images.zip"}
         )
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        print(f"Error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
