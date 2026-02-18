@@ -11,39 +11,30 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# Configuración de Máxima Velocidad
-# method=0 es el más rápido. method=6 es el más lento.
-FAST_METHOD = 0 
-
 @app.api_route("/", methods=["GET", "HEAD"])
 async def root():
     path = os.path.join(STATIC_DIR, "index.html")
-    return FileResponse(path) if os.path.exists(path) else Response(status_code=404)
+    if os.path.exists(path):
+        return FileResponse(path)
+    return Response(content="index.html missing", status_code=404)
 
 @app.post("/api/convert")
-async def convert_image(
-    files: List[UploadFile] = File(...),
-    quality: int = Form(80)
-):
+async def convert_image(files: List[UploadFile] = File(...), quality: int = Form(80)):
     try:
-        # Solo procesamos el primer archivo recibido para máxima velocidad por request
+        # Procesamos solo el primero de la lista enviada para velocidad individual
         file = files[0]
         content = await file.read()
         
-        # Validación
-        if len(content) > 20 * 1024 * 1024: 
+        if len(content) > 20 * 1024 * 1024:
             raise HTTPException(status_code=413, detail="File too large")
 
         with Image.open(io.BytesIO(content)) as img:
             out = io.BytesIO()
-            
-            # --- VELOCIDAD EXTREMA ---
-            # optimize=False (por defecto): No gasta CPU buscando ahorrar 2KB.
-            # method=0: Algoritmo rápido.
-            img.save(out, format="WEBP", quality=quality, method=FAST_METHOD)
-            
-            # Limpieza inmediata
+            # method=0 es VELOCIDAD PURA. optimize=False para no perder tiempo.
+            img.save(out, format="WEBP", quality=quality, method=0, optimize=False)
             val = out.getvalue()
+            
+            # Limpieza de memoria manual (GC)
             del content
             del out
             gc.collect()
@@ -54,4 +45,4 @@ async def convert_image(
         raise
     except Exception as e:
         print(f"Error: {e}")
-        raise HTTPException(status_code=400, detail=str(e)) from Exception
+        raise HTTPException(status_code=400, detail=str(e)) from e in Exception

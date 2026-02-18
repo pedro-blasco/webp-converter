@@ -3,36 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebP Speed</title>
+    <title>WebP Image Converter</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    
     <div class="card">
-        <!-- Barra Global Superior -->
-        <div class="progress-wrapper" id="mainProgressWrapper">
-            <div class="progress-fill" id="mainProgressBar"></div>
+        <!-- Barra de Progreso Global -->
+        <div class="progress-bar-wrapper">
+            <div class="progress-bar-fill" id="globalBar"></div>
         </div>
 
         <div class="header">
-            <h1>WebP Speed Converter</h1>
+            <h1>WebP Image Converter</h1>
             <button id="themeToggle" class="theme-btn">🌙</button>
         </div>
 
-        <div class="upload-box" id="dropZone">
-            <p style="margin:0; font-weight:500;">Click, Paste (Ctrl+V) or Drag Files</p>
+        <!-- ZONA DE CARGA -->
+        <div class="upload-zone" id="dropZone">
+            <div class="upload-text">
+                <span style="font-size: 24px;">📂</span>
+                <p>Click, Ctrl+V or Drag Files</p>
+            </div>
+            <!-- INPUT OCULTO PERO PRESENTE -->
+            <input type="file" id="fileInput" accept="image/*" multiple>
         </div>
 
-        <div class="list-header" style="margin-top:20px; display:flex; justify-content:space-between; font-size:12px; color:#888;">
+        <!-- CONTROLES -->
+        <div class="controls">
+            <div class="control-header">
+                <span>Quality</span>
+                <span id="qVal">80%</span>
+            </div>
+            <input type="range" id="quality" min="10" max="100" value="80">
+        </div>
+
+        <!-- CABECERA DE LISTA -->
+        <div class="list-actions">
             <span id="fileCount">0 Files</span>
-            <button id="clearAll" style="background:none; border:none; color:red; cursor:pointer;">Clear All</button>
+            <button id="clearAll" class="btn-text-danger">Clear All</button>
         </div>
         
-        <div class="file-list" id="fileList"></div>
+        <!-- LISTA DE ARCHIVOS -->
+        <div class="file-list" id="fileList">
+            <div class="empty-msg">No files selected</div>
+        </div>
 
-        <div style="margin-top:20px;">
-            <button id="btnConvertAll" class="btn-main" disabled>Convert All</button>
+        <!-- BOTÓN PRINCIPAL -->
+        <div class="footer">
+            <button id="btnConvertAll" class="btn-primary" disabled>Convert All</button>
         </div>
     </div>
+
+    <!-- SCRIPT AL FINAL PARA ASEGURAR CARGA -->
     <script src="/static/script.js"></script>
 </body>
 </html>
