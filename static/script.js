@@ -178,7 +178,7 @@ el.drop.ondragleave = () => el.drop.classList.remove('dragover');
 el.drop.ondrop = (e) => { e.preventDefault(); el.drop.classList.remove('dragover'); addFiles(e.dataTransfer.files); };
 
 window.addEventListener('paste', (e) => {
-    const items = e.clipboardData.items;
+    const {items} = e.clipboardData;
     const pasted = [];
     for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf("image") !== -1) {
