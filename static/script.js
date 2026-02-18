@@ -3,150 +3,176 @@ const el = {
     input: document.getElementById('fileInput'),
     list: document.getElementById('fileList'),
     count: document.getElementById('fileCount'),
-    clear: document.getElementById('clearAll'),
     btnAll: document.getElementById('btnConvertAll'),
-    bar: document.getElementById('globalProgress'),
-    quality: document.getElementById('quality'),
-    qVal: document.getElementById('qVal'),
+    clear: document.getElementById('clearAll'),
     theme: document.getElementById('themeToggle'),
-    msg: document.getElementById('statusMsg')
+    mainBarWrapper: document.getElementById('mainProgressWrapper'),
+    mainBar: document.getElementById('mainProgressBar')
 };
 
-let fileQueue = []; 
+let filesQueue = [];
+let isProcessing = false; // Bloqueo global
 
+// --- TEMA ---
 el.theme.onclick = () => {
     const isDark = document.body.getAttribute('data-theme') === 'dark';
     document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
     el.theme.innerText = isDark ? '🌙' : '☀️';
 };
 
-el.quality.oninput = (e) => el.qVal.innerText = e.target.value;
-
+// --- RENDERIZADO ---
 function render() {
     el.list.innerHTML = '';
     
-    if (fileQueue.length === 0) {
-        el.list.innerHTML = '<div class="empty-state">No files selected</div>';
+    if (filesQueue.length === 0) {
+        el.list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">No files selected</div>';
         el.btnAll.disabled = true;
         el.count.innerText = '0 Files';
         return;
     }
 
-    fileQueue.forEach((item, index) => {
+    filesQueue.forEach((item, index) => {
         const div = document.createElement('div');
         div.className = 'file-item';
         
-        let actionsHTML = '';
+        let rightSide = '';
 
         if (item.status === 'pending') {
-            actionsHTML = `
-                <button onclick="processSingle(${index})" class="action-btn btn-convert" title="Convert">▶</button>
-                <button onclick="remove(${index})" class="action-btn btn-delete" title="Remove">×</button>
+            // Botón de texto CONVERT
+            rightSide = `
+                <button onclick="processSingle(${index})" class="btn-sm btn-convert" ${isProcessing ? 'disabled' : ''}>Convert</button>
+                <button onclick="remove(${index})" class="btn-sm btn-remove" ${isProcessing ? 'disabled' : ''}>×</button>
             `;
         } else if (item.status === 'loading') {
-            actionsHTML = `<div class="loader"></div>`;
+            // Barrita cargando
+            rightSide = `<div class="mini-loader"></div>`;
         } else if (item.status === 'done') {
-            actionsHTML = `
-                <a href="${item.url}" download="${item.newName}" class="action-btn btn-download" title="Download">⬇</a>
-                <button onclick="remove(${index})" class="action-btn btn-delete" title="Remove">×</button>
+            // Botón DOWNLOAD
+            rightSide = `
+                <a href="${item.url}" download="${item.newName}" class="btn-sm btn-download">Download</a>
+                <button onclick="remove(${index})" class="btn-sm btn-remove">×</button>
             `;
+        } else if (item.status === 'error') {
+            rightSide = `<span style="color:red; font-size:11px;">Error</span> <button onclick="remove(${index})" class="btn-sm btn-remove">×</button>`;
         }
 
         div.innerHTML = `
             <div class="file-info">
-                <span>📄</span>
-                <span class="file-name" title="${item.file.name}">${item.file.name}</span>
+                <div class="file-name" title="${item.file.name}">${item.file.name}</div>
+                <div class="file-status">${(item.file.size/1024).toFixed(0)} KB</div>
             </div>
-            <div class="file-actions">
-                ${actionsHTML}
+            <div class="actions-group">
+                ${rightSide}
             </div>
         `;
         el.list.appendChild(div);
     });
 
-    el.count.innerText = `${fileQueue.length} Files`;
-    el.btnAll.disabled = false;
+    // Contadores
+    const pendingCount = filesQueue.filter(f => f.status === 'pending').length;
+    el.count.innerText = `${filesQueue.length} Files`;
+    
+    // El botón Convert All se deshabilita si está procesando o si no hay nada pendiente
+    el.btnAll.disabled = isProcessing || pendingCount === 0;
+    el.btnAll.innerText = isProcessing ? "Processing..." : "Convert Remaining";
+    el.clear.disabled = isProcessing;
 }
 
-function addFiles(newFiles) {
-    el.msg.innerText = '';
-    Array.from(newFiles).forEach(f => {
+// --- LOGICA ---
+function addFiles(list) {
+    Array.from(list).forEach(f => {
         if (f.type.startsWith('image/')) {
-            fileQueue.push({ file: f, status: 'pending', url: null });
+            filesQueue.push({ file: f, status: 'pending', url: null });
         }
     });
     render();
 }
 
 window.remove = (index) => {
-    fileQueue.splice(index, 1);
+    filesQueue.splice(index, 1);
     render();
 };
 
 el.clear.onclick = () => {
-    fileQueue = [];
+    filesQueue = [];
     render();
 };
 
-async function sendToApi(filesList) {
+// API
+async function convertOne(fileObj) {
     const fd = new FormData();
-    filesList.forEach(f => fd.append("files", f));
-    fd.append("quality", el.quality.value);
-    
+    fd.append("files", fileObj);
+    fd.append("quality", 80); // Calidad fija para UI limpia
+
     const res = await fetch('/api/convert', { method: 'POST', body: fd });
-    if (!res.ok) throw new Error("Conversion failed");
+    if (!res.ok) throw new Error("Err");
     return await res.blob();
 }
 
+// PROCESAR UNO
 window.processSingle = async (index) => {
-    const item = fileQueue[index];
+    if (isProcessing) return;
+    
+    const item = filesQueue[index];
     item.status = 'loading';
     render();
 
     try {
-        const blob = await sendToApi([item.file]);
+        const blob = await convertOne(item.file);
         item.url = URL.createObjectURL(blob);
         item.newName = item.file.name.split('.')[0] + '.webp';
         item.status = 'done';
     } catch (e) {
-        item.status = 'pending';
-        alert("Error converting this file");
+        item.status = 'error';
     }
     render();
 };
 
+// PROCESAR TODOS (Secuencial para ver progreso real)
 el.btnAll.onclick = async () => {
-    const pendingItems = fileQueue.filter(i => i.status === 'pending');
-    if (pendingItems.length === 0) return alert("Nothing to convert");
+    const pendingIndices = filesQueue
+        .map((item, index) => item.status === 'pending' ? index : -1)
+        .filter(i => i !== -1);
 
-    el.bar.style.width = '50%';
-    el.btnAll.disabled = true;
-    el.btnAll.innerText = "Processing...";
+    if (pendingIndices.length === 0) return;
 
-    try {
-        const filesOnly = pendingItems.map(i => i.file);
-        const blob = await sendToApi(filesOnly);
+    isProcessing = true;
+    el.mainBarWrapper.style.display = 'block';
+    
+    let completed = 0;
+    const total = pendingIndices.length;
+
+    // Procesamos uno por uno (Secuencial) para no matar al server
+    // y para que el usuario vea la barra avanzar bonito.
+    for (const index of pendingIndices) {
+        filesQueue[index].status = 'loading';
+        render(); // Actualiza UI para mostrar spinner en el actual
+
+        try {
+            const blob = await convertOne(filesQueue[index].file);
+            filesQueue[index].url = URL.createObjectURL(blob);
+            filesQueue[index].newName = filesQueue[index].file.name.split('.')[0] + '.webp';
+            filesQueue[index].status = 'done';
+        } catch (e) {
+            filesQueue[index].status = 'error';
+        }
         
-        el.bar.style.width = '100%';
-
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filesOnly.length === 1 ? "image.webp" : "images_optimized.zip";
-        a.click();
-
-        setTimeout(() => { el.bar.style.width = '0%'; }, 1000);
-
-    } catch (e) {
-        el.msg.innerText = "Batch error";
-        el.bar.style.width = '0%';
-    } finally {
-        el.btnAll.disabled = false;
-        // Cambio de texto: Si se descargó ZIP, dice Download, si no Convert
-        el.btnAll.innerText = "Convert";
+        completed++;
+        el.mainBar.style.width = `${(completed / total) * 100}%`;
+        
+        // Pequeña pausa para que la UI respire
+        render(); 
     }
+
+    isProcessing = false;
+    setTimeout(() => {
+        el.mainBarWrapper.style.display = 'none';
+        el.mainBar.style.width = '0%';
+    }, 1000);
+    render();
 };
 
+// DRAG DROP & PASTE
 el.drop.onclick = () => el.input.click();
 el.input.onchange = (e) => { addFiles(e.target.files); el.input.value = ''; };
 el.drop.ondragover = (e) => { e.preventDefault(); el.drop.classList.add('dragover'); };
@@ -155,13 +181,13 @@ el.drop.ondrop = (e) => { e.preventDefault(); el.drop.classList.remove('dragover
 
 window.addEventListener('paste', (e) => {
     const {items} = e.clipboardData;
-    const pasted = [];
-    for (let i = 0; i < items.length; i++) {
+    const p = [];
+    for (let i=0; i<items.length; i++) {
         if (items[i].type.indexOf("image") !== -1) {
-            const blob = items[i].getAsFile();
-            if (!blob.name || blob.name === 'image.png') blob.name = `pasted_${Date.now()}.png`;
-            pasted.push(blob);
+            const b = items[i].getAsFile();
+            if (!b.name || b.name === 'image.png') b.name = `pasted_${Date.now()}.png`;
+            p.push(b);
         }
     }
-    if (pasted.length > 0) addFiles(pasted);
+    if (p.length) addFiles(p);
 });

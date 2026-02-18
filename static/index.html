@@ -3,49 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebP Master</title>
+    <title>WebP Speed</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    
     <div class="card">
-        <div class="global-progress" id="globalProgress"></div>
+        <!-- Barra Global Superior -->
+        <div class="progress-wrapper" id="mainProgressWrapper">
+            <div class="progress-fill" id="mainProgressBar"></div>
+        </div>
 
         <div class="header">
-            <h1>WebP Master</h1>
-            <button id="themeToggle" class="icon-btn" title="Theme">🌙</button>
+            <h1>WebP Speed Converter</h1>
+            <button id="themeToggle" class="theme-btn">🌙</button>
         </div>
 
         <div class="upload-box" id="dropZone">
-            <div class="upload-content">
-                <span class="icon">📂</span>
-                <p>Drag & Drop, Paste (Ctrl+V) or Click</p>
-            </div>
-            <input type="file" id="fileInput" accept="image/*" multiple>
+            <p style="margin:0; font-weight:500;">Click, Paste (Ctrl+V) or Drag Files</p>
         </div>
 
-        <div class="controls">
-            <label>Quality: <span id="qVal">80</span>%</label>
-            <input type="range" id="quality" min="10" max="100" value="80">
-        </div>
-
-        <div class="list-header">
+        <div class="list-header" style="margin-top:20px; display:flex; justify-content:space-between; font-size:12px; color:#888;">
             <span id="fileCount">0 Files</span>
-            <button id="clearAll" class="text-btn">Clear All</button>
+            <button id="clearAll" style="background:none; border:none; color:red; cursor:pointer;">Clear All</button>
         </div>
         
-        <div class="file-list" id="fileList">
-            <div class="empty-state">No files selected</div>
-        </div>
+        <div class="file-list" id="fileList"></div>
 
-        <div class="actions">
-            <!-- Texto cambiado a "Convert" -->
-            <button id="btnConvertAll" class="btn primary" disabled>Convert</button>
+        <div style="margin-top:20px;">
+            <button id="btnConvertAll" class="btn-main" disabled>Convert All</button>
         </div>
-        
-        <div id="statusMsg" class="status-text"></div>
     </div>
-
     <script src="/static/script.js"></script>
 </body>
 </html>
