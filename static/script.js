@@ -12,10 +12,8 @@ const el = {
     msg: document.getElementById('statusMsg')
 };
 
-// ESTADO: Array de objetos { file: File, status: 'pending'|'loading'|'done', url: string }
 let fileQueue = []; 
 
-// THEME
 el.theme.onclick = () => {
     const isDark = document.body.getAttribute('data-theme') === 'dark';
     document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
@@ -24,7 +22,6 @@ el.theme.onclick = () => {
 
 el.quality.oninput = (e) => el.qVal.innerText = e.target.value;
 
-// RENDERIZADO (El corazón del script)
 function render() {
     el.list.innerHTML = '';
     
@@ -42,16 +39,13 @@ function render() {
         let actionsHTML = '';
 
         if (item.status === 'pending') {
-            // Botón Play (Convertir este solo)
             actionsHTML = `
-                <button onclick="processSingle(${index})" class="action-btn btn-convert" title="Convert This">▶</button>
+                <button onclick="processSingle(${index})" class="action-btn btn-convert" title="Convert">▶</button>
                 <button onclick="remove(${index})" class="action-btn btn-delete" title="Remove">×</button>
             `;
         } else if (item.status === 'loading') {
-            // Spinner de carga
             actionsHTML = `<div class="loader"></div>`;
         } else if (item.status === 'done') {
-            // Botón Descargar y Borrar
             actionsHTML = `
                 <a href="${item.url}" download="${item.newName}" class="action-btn btn-download" title="Download">⬇</a>
                 <button onclick="remove(${index})" class="action-btn btn-delete" title="Remove">×</button>
@@ -74,12 +68,10 @@ function render() {
     el.btnAll.disabled = false;
 }
 
-// GESTIÓN DE ARCHIVOS
 function addFiles(newFiles) {
     el.msg.innerText = '';
     Array.from(newFiles).forEach(f => {
         if (f.type.startsWith('image/')) {
-            // Añadimos al estado inicial
             fileQueue.push({ file: f, status: 'pending', url: null });
         }
     });
@@ -96,7 +88,6 @@ el.clear.onclick = () => {
     render();
 };
 
-// API CALL (Genérica para 1 o varios)
 async function sendToApi(filesList) {
     const fd = new FormData();
     filesList.forEach(f => fd.append("files", f));
@@ -107,72 +98,57 @@ async function sendToApi(filesList) {
     return await res.blob();
 }
 
-// PROCESO INDIVIDUAL (El botón ▶)
 window.processSingle = async (index) => {
     const item = fileQueue[index];
-    
-    // UI: Poner cargando este item
     item.status = 'loading';
     render();
 
     try {
-        // Enviar SOLO este archivo
         const blob = await sendToApi([item.file]);
-        
-        // Actualizar estado con URL
         item.url = URL.createObjectURL(blob);
         item.newName = item.file.name.split('.')[0] + '.webp';
         item.status = 'done';
-        
     } catch (e) {
-        item.status = 'pending'; // Volver a permitir intento
+        item.status = 'pending';
         alert("Error converting this file");
     }
     render();
 };
 
-// PROCESO GLOBAL (Convert All)
 el.btnAll.onclick = async () => {
     const pendingItems = fileQueue.filter(i => i.status === 'pending');
-    if (pendingItems.length === 0) return alert("All files already converted!");
+    if (pendingItems.length === 0) return alert("Nothing to convert");
 
-    // UI: Barra global cargando
     el.bar.style.width = '50%';
     el.btnAll.disabled = true;
     el.btnAll.innerText = "Processing...";
 
     try {
-        // Enviar TODOS los pendientes
         const filesOnly = pendingItems.map(i => i.file);
         const blob = await sendToApi(filesOnly);
         
-        // Completar barra
         el.bar.style.width = '100%';
 
-        // Descargar ZIP automático
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = filesOnly.length === 1 ? "image.webp" : "images_optimized.zip";
         a.click();
 
-        // Opcional: Marcar todos como 'done' en la lista?
-        // En batch zip es difícil mapear URL individuales, así que reiniciamos barra.
         setTimeout(() => { el.bar.style.width = '0%'; }, 1000);
 
     } catch (e) {
-        el.msg.innerText = "Batch conversion error";
+        el.msg.innerText = "Batch error";
         el.bar.style.width = '0%';
     } finally {
         el.btnAll.disabled = false;
-        el.btnAll.innerText = "Convert All to ZIP";
+        // Cambio de texto: Si se descargó ZIP, dice Download, si no Convert
+        el.btnAll.innerText = "Convert";
     }
 };
 
-// DRAG & DROP & PASTE
 el.drop.onclick = () => el.input.click();
 el.input.onchange = (e) => { addFiles(e.target.files); el.input.value = ''; };
-
 el.drop.ondragover = (e) => { e.preventDefault(); el.drop.classList.add('dragover'); };
 el.drop.ondragleave = () => el.drop.classList.remove('dragover');
 el.drop.ondrop = (e) => { e.preventDefault(); el.drop.classList.remove('dragover'); addFiles(e.dataTransfer.files); };
