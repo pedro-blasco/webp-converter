@@ -4,21 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebP Speed Converter</title>
-    <link rel="stylesheet" href="/static/style.css?v=3">
-    <!-- LIBRERÍA PARA CREAR ZIP EN EL NAVEGADOR (Client Side) -->
+    <link rel="stylesheet" href="/static/style.css?v=4">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
-<body>
+<!-- DARK MODE ACTIVADO POR DEFECTO AQUI -->
+<body data-theme="dark">
     
     <div class="card">
-        <!-- Barra de Progreso Global -->
         <div class="progress-bar-wrapper">
             <div class="progress-bar-fill" id="globalBar"></div>
         </div>
 
         <div class="header">
             <h1>WebP Converter</h1>
-            <button id="themeToggle" class="theme-btn">🌙</button>
+            <!-- Icono inicial cambiado a Sol porque empezamos en oscuro -->
+            <button id="themeToggle" class="theme-btn">☀️</button>
         </div>
 
         <div class="upload-zone" id="dropZone">
@@ -47,11 +47,10 @@
         </div>
 
         <div class="footer">
-            <!-- Este botón cambiará mágicamente a "Download ZIP" al terminar -->
             <button id="btnConvertAll" class="btn-primary" disabled>Convert All</button>
         </div>
     </div>
 
-    <script src="/static/script.js?v=3"></script>
+    <script src="/static/script.js?v=4"></script>
 </body>
 </html>

@@ -12,21 +12,24 @@ document.addEventListener('DOMContentLoaded', () => {
         theme: document.getElementById('themeToggle')
     };
 
-    // Almacena { file, status, blob (imagen convertida), url }
     let fileQueue = [];
     let isProcessing = false;
     let allConverted = false;
 
-    // --- TEMA ---
+    // --- TEMA (Dark por defecto) ---
     el.theme.onclick = () => {
-        const isDark = document.body.getAttribute('data-theme') === 'dark';
+        // Leemos el atributo actual
+        const current = document.body.getAttribute('data-theme');
+        // Si no tiene atributo o es dark, pasamos a light
+        const isDark = (current === 'dark');
+        
         document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
         el.theme.innerText = isDark ? '🌙' : '☀️';
     };
 
     el.quality.oninput = (e) => el.qVal.innerText = e.target.value + '%';
 
-    // --- RENDERIZADO ---
+    // --- RENDER ---
     function render() {
         el.list.innerHTML = '';
         
@@ -39,7 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Verificar si todos están listos para activar modo ZIP
         const pendingCount = fileQueue.filter(f => f.status === 'pending' || f.status === 'loading').length;
         const doneCount = fileQueue.filter(f => f.status === 'done').length;
         allConverted = (pendingCount === 0 && doneCount > 0);
@@ -80,27 +82,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         el.count.innerText = `${fileQueue.length} Files`;
         
-        // Lógica del Botón Principal
         if (isProcessing) {
             el.btnAll.disabled = true;
             el.btnAll.innerText = "Processing...";
             el.btnAll.classList.remove('btn-success');
         } else if (allConverted) {
-            // MODO ZIP: Todo convertido
             el.btnAll.disabled = false;
             el.btnAll.innerText = "Download All (ZIP)";
             el.btnAll.classList.add('btn-success');
-            el.btnAll.onclick = downloadAllZip; // Cambiamos la acción del botón
+            el.btnAll.onclick = downloadAllZip;
         } else {
-            // MODO CONVERTIR: Hay pendientes
             el.btnAll.disabled = pendingCount === 0;
             el.btnAll.innerText = "Convert All";
             el.btnAll.classList.remove('btn-success');
-            el.btnAll.onclick = convertAllSequence; // Acción normal
+            el.btnAll.onclick = convertAllSequence;
         }
     }
 
-    // --- MANEJO ARCHIVOS ---
+    // --- ARCHIVOS ---
     function addFiles(files) {
         Array.from(files).forEach(f => {
             if (f.type.startsWith('image/')) {
@@ -120,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         render();
     };
 
-    // --- API ---
+    // --- API HELPER ---
     async function convertApi(file) {
         const fd = new FormData();
         fd.append("files", file);
@@ -130,26 +129,30 @@ document.addEventListener('DOMContentLoaded', () => {
         return await res.blob();
     }
 
+    // --- HELPER PARA PROCESAR ITEM ESPECIFICO (Promesa) ---
+    async function processItem(idx) {
+        fileQueue[idx].status = 'loading';
+        render(); // Actualiza a spinner
+        try {
+            const blob = await convertApi(fileQueue[idx].file);
+            fileQueue[idx].blob = blob;
+            fileQueue[idx].url = URL.createObjectURL(blob);
+            fileQueue[idx].newName = fileQueue[idx].file.name.split('.')[0] + '.webp';
+            fileQueue[idx].status = 'done';
+        } catch (e) {
+            fileQueue[idx].status = 'error';
+        }
+        // No llamamos a render() aquí para evitar parpadeos excesivos en el loop paralelo
+    }
+
     // --- PROCESO UNICO ---
     window.processOne = async (index) => {
         if (isProcessing) return;
-        const item = fileQueue[index];
-        item.status = 'loading';
-        render();
-
-        try {
-            const blob = await convertApi(item.file);
-            item.blob = blob; // Guardamos el blob para el ZIP
-            item.url = URL.createObjectURL(blob);
-            item.newName = item.file.name.split('.')[0] + '.webp';
-            item.status = 'done';
-        } catch (e) {
-            item.status = 'error';
-        }
+        await processItem(index);
         render();
     };
 
-    // --- PROCESO SECUENCIAL (CONVERT ALL) ---
+    // --- PROCESO PARALELO (BATCH DE 2) ---
     async function convertAllSequence() {
         const indices = fileQueue.map((item, idx) => item.status === 'pending' ? idx : -1).filter(i => i !== -1);
         if (indices.length === 0) return;
@@ -160,46 +163,44 @@ document.addEventListener('DOMContentLoaded', () => {
         let completed = 0;
         const total = indices.length;
 
-        for (const idx of indices) {
-            fileQueue[idx].status = 'loading';
-            render();
-
-            try {
-                const blob = await convertApi(fileQueue[idx].file);
-                fileQueue[idx].blob = blob; // Guardamos para ZIP
-                fileQueue[idx].url = URL.createObjectURL(blob);
-                fileQueue[idx].newName = fileQueue[idx].file.name.split('.')[0] + '.webp';
-                fileQueue[idx].status = 'done';
-            } catch (e) {
-                fileQueue[idx].status = 'error';
-            }
+        // BUCLE EN PASOS DE 2
+        for (let i = 0; i < indices.length; i += 2) {
+            const idx1 = indices[i];
+            const idx2 = indices[i+1]; // Puede ser undefined si es impar
             
-            completed++;
+            const batch = [processItem(idx1)];
+            if (idx2 !== undefined) {
+                batch.push(processItem(idx2));
+            }
+
+            // Esperamos a que ambos terminen
+            await Promise.all(batch);
+            
+            // Actualizamos progreso
+            completed += batch.length;
             el.globalBar.style.width = `${(completed / total) * 100}%`;
-            // Pequeña pausa
+            
+            // Renderizamos estado actual
+            render();
+            
+            // Pequeña pausa para no saturar UI
             await new Promise(r => setTimeout(r, 20)); 
         }
 
         isProcessing = false;
         setTimeout(() => { el.globalBar.style.width = '0%'; }, 500);
-        render(); // Al renderizar, detectará "allConverted" y cambiará el botón a ZIP
+        render();
     };
 
-    // --- GENERAR ZIP (CLIENT SIDE) ---
+    // --- ZIP ---
     async function downloadAllZip() {
         const zip = new JSZip();
-        
-        // Agregamos todos los archivos convertidos al ZIP
         fileQueue.forEach(item => {
             if (item.status === 'done' && item.blob) {
                 zip.file(item.newName, item.blob);
             }
         });
-
-        // Generamos el archivo ZIP
         const content = await zip.generateAsync({type:"blob"});
-        
-        // Descargamos
         const url = URL.createObjectURL(content);
         const a = document.createElement('a');
         a.href = url;

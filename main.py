@@ -29,7 +29,7 @@ async def convert_image(files: List[UploadFile] = File(...), quality: int = Form
 
         with Image.open(io.BytesIO(content)) as img:
             out = io.BytesIO()
-            # method=0 es VELOCIDAD PURA
+            # method=0 para velocidad máxima
             img.save(out, format="WEBP", quality=quality, method=0, optimize=False)
             val = out.getvalue()
             
@@ -38,9 +38,8 @@ async def convert_image(files: List[UploadFile] = File(...), quality: int = Form
             gc.collect()
             
             return Response(content=val, media_type="image/webp")
-
     except HTTPException:
         raise
     except Exception as e:
         print(f"Error: {e}")
-        raise HTTPException(status_code=400, detail=str(e)) from e in Exception
+        raise HTTPException(status_code=400, detail=str(e)) from Exception in e
