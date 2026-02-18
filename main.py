@@ -25,4 +25,7 @@ async def convert_image(file: UploadFile = File(...)):
             img.save(output, format="WEBP", quality=80, optimize=True)
             output.seek(0)
             return Response(content=output.getvalue(), media_type="image/webp")
-    except Exception as e: raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
