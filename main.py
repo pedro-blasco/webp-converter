@@ -32,10 +32,12 @@ async def convert_images(
                 # Convertir a WebP
                 img.save(out, format="WEBP", quality=quality, optimize=True)
                 
-                processed.append({
-                    "name": os.path.splitext(file.filename)[0] + ".webp",
-                    "data": out.getvalue()
-                })
+                processed.append(
+                    {
+                        "name": f"{os.path.splitext(file.filename)[0]}.webp",
+                        "data": out.getvalue(),
+                    }
+                )
 
         if not processed: 
             raise HTTPException(status_code=400, detail="No valid images")
