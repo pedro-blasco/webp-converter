@@ -3,43 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebP Pro Converter</title>
+    <title>WebP Manager</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <button id="themeToggle" class="theme-btn">🌙</button>
+    
     <div class="card">
-        <h1>WebP Converter Pro</h1>
+        <h1>Image Manager</h1>
         
         <div class="upload-area" id="dropZone">
-            <span class="upload-text">Drag & Drop images or Paste (Ctrl+V)</span>
+            <span class="upload-text">Drag & Drop or Paste (Ctrl+V)</span>
             <input type="file" id="fileInput" accept="image/*" multiple>
         </div>
 
         <div class="controls">
-            <div class="control-group">
-                <label>Quality: <span id="qualityVal">80</span>%</label>
+            <div class="control-row">
+                <label>Quality: <span id="qVal">80</span>%</label>
                 <input type="range" id="quality" min="10" max="100" value="80">
             </div>
-            <div class="control-group inputs-row">
-                <input type="number" id="width" placeholder="Width (px)">
-                <input type="number" id="height" placeholder="Height (px)">
+            <div class="control-row inputs">
+                <input type="number" id="wInput" placeholder="W (px)">
+                <input type="number" id="hInput" placeholder="H (px)">
             </div>
         </div>
 
-        <div class="file-info" id="fileInfo">
-            <span class="filename" id="fileName"></span>
-            <span class="badge" id="fileCount"></span>
+        <div class="file-list-header">
+            <span id="listCount">0 Files</span>
+            <button id="clearAll" class="btn-text">Clear All</button>
         </div>
 
-        <button id="btnConvert" class="btn" disabled>Convert All</button>
-        
-        <div class="progress-container" id="progressContainer">
-            <div class="progress-bar" id="progressBar"></div>
+        <div class="file-list-container" id="fileList">
+            <!-- Files injected here by JS -->
         </div>
-        
-        <a id="btnDownload" class="btn btn-download">Download Result</a>
-        <div id="error-msg"></div>
+
+        <div class="batch-actions">
+            <button id="btnConvertAll" class="btn primary" disabled>Convert All to ZIP</button>
+        </div>
     </div>
     <script src="/static/script.js"></script>
 </body>

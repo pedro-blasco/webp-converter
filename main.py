@@ -24,44 +24,41 @@ async def convert_images(
     height: int = Form(0)
 ):
     try:
-        processed_files = []
-        
+        processed = []
         for file in files:
             content = await file.read()
-            if len(content) > 15 * 1024 * 1024: continue 
+            if len(content) > 20 * 1024 * 1024: continue
             
             with Image.open(io.BytesIO(content)) as img:
-                # Resize logic
                 if width > 0 or height > 0:
                     w = width if width > 0 else img.width
                     h = height if height > 0 else img.height
                     img = img.resize((w, h), Image.Resampling.LANCZOS)
                 
-                output = io.BytesIO()
-                img.save(output, format="WEBP", quality=quality, optimize=True)
-                processed_files.append(
+                out = io.BytesIO()
+                img.save(out, format="WEBP", quality=quality, optimize=True)
+                processed.append(
                     {
                         "name": f"{os.path.splitext(file.filename)[0]}.webp",
-                        "data": output.getvalue(),
+                        "data": out.getvalue(),
                     }
-                )
+                    )                
 
-        if not processed_files: raise HTTPException(status_code=400, detail="No valid files processed")
+        if not processed: raise HTTPException(status_code=400, detail="No valid images")
 
-        # Return single image or ZIP
-        if len(processed_files) == 1:
-            return Response(content=processed_files[0]["data"], media_type="image/webp")
+        if len(processed) == 1:
+            return Response(content=processed[0]["data"], media_type="image/webp")
         
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            for f in processed_files:
-                zip_file.writestr(f["name"], f["data"])
-        
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            for f in processed: zf.writestr(f["name"], f["data"])
+            
         return Response(
-            content=zip_buffer.getvalue(),
+            content=zip_buf.getvalue(),
             media_type="application/zip",
-            headers={"Content-Disposition": "attachment; filename=converted_images.zip"}
+            headers={"Content-Disposition": "attachment; filename=images.zip"}
         )
+
     except HTTPException:
         raise
     except Exception as e:
