@@ -3,18 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebP Converter</title>
+    <title>WebP Master</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     
     <div class="card">
+        <!-- Barra de Carga Global -->
+        <div class="global-progress" id="globalProgress"></div>
+
         <div class="header">
-            <h1>WebP Converter</h1>
-            <button id="themeToggle" class="icon-btn" title="Toggle Theme">🌙</button>
+            <h1>WebP Master</h1>
+            <button id="themeToggle" class="icon-btn" title="Theme">🌙</button>
         </div>
 
-        <!-- Área de Carga -->
         <div class="upload-box" id="dropZone">
             <div class="upload-content">
                 <span class="icon">📂</span>
@@ -23,27 +25,22 @@
             <input type="file" id="fileInput" accept="image/*" multiple>
         </div>
 
-        <!-- Controles Globales -->
         <div class="controls">
             <label>Quality: <span id="qVal">80</span>%</label>
             <input type="range" id="quality" min="10" max="100" value="80">
         </div>
 
-        <!-- Lista de Archivos (Scrollable) -->
         <div class="list-header">
             <span id="fileCount">0 Files</span>
             <button id="clearAll" class="text-btn">Clear All</button>
         </div>
         
         <div class="file-list" id="fileList">
-            <!-- Aquí se inyectan los archivos con JS -->
             <div class="empty-state">No files selected</div>
         </div>
 
-        <!-- Botón de Acción -->
         <div class="actions">
-            <button id="btnConvert" class="btn primary" disabled>Convert All</button>
-            <a id="btnDownload" class="btn success" style="display: none;">Download</a>
+            <button id="btnConvertAll" class="btn primary" disabled>Convert All to ZIP</button>
         </div>
         
         <div id="statusMsg" class="status-text"></div>

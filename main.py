@@ -25,28 +25,27 @@ async def convert_images(
         processed = []
         for file in files:
             content = await file.read()
-            # Limite de 20MB por archivo para no saturar
-            if len(content) > 20 * 1024 * 1024: continue
+            if len(content) > 20 * 1024 * 1024: continue # 20MB limit
             
             with Image.open(io.BytesIO(content)) as img:
                 out = io.BytesIO()
-                # Convertimos
+                # Convertir a WebP
                 img.save(out, format="WEBP", quality=quality, optimize=True)
                 
-                # Guardamos resultado en memoria
                 processed.append({
                     "name": os.path.splitext(file.filename)[0] + ".webp",
                     "data": out.getvalue()
                 })
 
         if not processed: 
-            raise HTTPException(status_code=400, detail="No valid images processed")
+            raise HTTPException(status_code=400, detail="No valid images")
 
-        # Si es solo 1 imagen, devolvemos la imagen directa
+        # LOGICA INTELIGENTE:
+        # Si envían 1 archivo, devolvemos IMAGEN (para conversión individual o única)
         if len(processed) == 1:
             return Response(content=processed[0]["data"], media_type="image/webp")
         
-        # Si son varias, creamos un ZIP
+        # Si envían varios, devolvemos ZIP (para conversión masiva)
         zip_buf = io.BytesIO()
         with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
             for f in processed:
