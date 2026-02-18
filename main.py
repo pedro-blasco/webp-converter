@@ -21,7 +21,6 @@ async def root():
 @app.post("/api/convert")
 async def convert_image(files: List[UploadFile] = File(...), quality: int = Form(80)):
     try:
-        # Procesamos solo el primero de la lista enviada para velocidad individual
         file = files[0]
         content = await file.read()
         
@@ -30,11 +29,10 @@ async def convert_image(files: List[UploadFile] = File(...), quality: int = Form
 
         with Image.open(io.BytesIO(content)) as img:
             out = io.BytesIO()
-            # method=0 es VELOCIDAD PURA. optimize=False para no perder tiempo.
+            # method=0 es VELOCIDAD PURA
             img.save(out, format="WEBP", quality=quality, method=0, optimize=False)
             val = out.getvalue()
             
-            # Limpieza de memoria manual (GC)
             del content
             del out
             gc.collect()

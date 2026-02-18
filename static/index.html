@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebP Image Converter</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <title>WebP Speed Converter</title>
+    <link rel="stylesheet" href="/static/style.css?v=3">
+    <!-- LIBRERÍA PARA CREAR ZIP EN EL NAVEGADOR (Client Side) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
     
@@ -15,21 +17,18 @@
         </div>
 
         <div class="header">
-            <h1>WebP Image Converter</h1>
+            <h1>WebP Converter</h1>
             <button id="themeToggle" class="theme-btn">🌙</button>
         </div>
 
-        <!-- ZONA DE CARGA -->
         <div class="upload-zone" id="dropZone">
             <div class="upload-text">
                 <span style="font-size: 24px;">📂</span>
-                <p>Click, Ctrl+V or Drag Files</p>
+                <p>Click, Paste (Ctrl+V) or Drag Files</p>
             </div>
-            <!-- INPUT OCULTO PERO PRESENTE -->
             <input type="file" id="fileInput" accept="image/*" multiple>
         </div>
 
-        <!-- CONTROLES -->
         <div class="controls">
             <div class="control-header">
                 <span>Quality</span>
@@ -38,24 +37,21 @@
             <input type="range" id="quality" min="10" max="100" value="80">
         </div>
 
-        <!-- CABECERA DE LISTA -->
         <div class="list-actions">
             <span id="fileCount">0 Files</span>
             <button id="clearAll" class="btn-text-danger">Clear All</button>
         </div>
         
-        <!-- LISTA DE ARCHIVOS -->
         <div class="file-list" id="fileList">
             <div class="empty-msg">No files selected</div>
         </div>
 
-        <!-- BOTÓN PRINCIPAL -->
         <div class="footer">
+            <!-- Este botón cambiará mágicamente a "Download ZIP" al terminar -->
             <button id="btnConvertAll" class="btn-primary" disabled>Convert All</button>
         </div>
     </div>
 
-    <!-- SCRIPT AL FINAL PARA ASEGURAR CARGA -->
-    <script src="/static/script.js"></script>
+    <script src="/static/script.js?v=3"></script>
 </body>
 </html>
