@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const el = {
+    // Agrupación de elementos del DOM (Clean Code)
+    const DOM = {
         drop: document.getElementById('dropZone'),
         input: document.getElementById('fileInput'),
         list: document.getElementById('fileList'),
@@ -12,46 +13,37 @@ document.addEventListener('DOMContentLoaded', () => {
         theme: document.getElementById('themeToggle')
     };
 
-    let fileQueue = [];
+    let fileQueue =[];
     let isProcessing = false;
-    let allConverted = false;
 
-    // --- TEMA (Dark por defecto) ---
-    el.theme.onclick = () => {
-        // Leemos el atributo actual
-        const current = document.body.getAttribute('data-theme');
-        // Si no tiene atributo o es dark, pasamos a light
-        const isDark = (current === 'dark');
-        
+    // --- TEMA (Dark mode toggle) ---
+    DOM.theme.onclick = () => {
+        const isDark = document.body.getAttribute('data-theme') === 'dark';
         document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
-        el.theme.innerText = isDark ? '🌙' : '☀️';
+        DOM.theme.innerText = isDark ? '🌙' : '☀️';
     };
 
-    el.quality.oninput = (e) => el.qVal.innerText = e.target.value + '%';
+    DOM.quality.oninput = (e) => DOM.qVal.innerText = `${e.target.value}%`;
 
-    // --- RENDER ---
+    // --- RENDERIZADO DOM ---
     function render() {
-        el.list.innerHTML = '';
+        DOM.list.innerHTML = '';
         
         if (fileQueue.length === 0) {
-            el.list.innerHTML = '<div class="empty-msg">No files selected</div>';
-            el.btnAll.disabled = true;
-            el.btnAll.innerText = "Convert All";
-            el.btnAll.classList.remove('btn-success');
-            el.count.innerText = '0 Files';
+            DOM.list.innerHTML = '<div class="empty-msg">No files selected</div>';
+            updateMainButton(false, "Convert All", 'btn-primary');
+            DOM.count.innerText = '0 Files';
             return;
         }
 
         const pendingCount = fileQueue.filter(f => f.status === 'pending' || f.status === 'loading').length;
-        const doneCount = fileQueue.filter(f => f.status === 'done').length;
-        allConverted = (pendingCount === 0 && doneCount > 0);
+        const allConverted = (pendingCount === 0 && fileQueue.length > 0);
 
         fileQueue.forEach((item, index) => {
             const div = document.createElement('div');
             div.className = 'file-item';
             
             let actions = '';
-            
             if (item.status === 'pending') {
                 actions = `
                     <div class="btn-row">
@@ -70,36 +62,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 actions = `<span style="color:red; font-size:11px;">Error</span> <button onclick="removeFile(${index})" class="btn-sm btn-remove">×</button>`;
             }
 
+            const sizeKB = (item.file.size / 1024).toFixed(0);
             div.innerHTML = `
                 <div class="file-info">
                     <div class="file-name" title="${item.file.name}">${item.file.name}</div>
-                    <div style="font-size:11px; color:var(--sub);">${(item.file.size/1024).toFixed(0)} KB</div>
+                    <div style="font-size:11px; color:var(--sub);">${sizeKB} KB</div>
                 </div>
                 ${actions}
             `;
-            el.list.appendChild(div);
+            DOM.list.appendChild(div);
         });
 
-        el.count.innerText = `${fileQueue.length} Files`;
+        DOM.count.innerText = `${fileQueue.length} Files`;
         
+        // Estado del botón principal
         if (isProcessing) {
-            el.btnAll.disabled = true;
-            el.btnAll.innerText = "Processing...";
-            el.btnAll.classList.remove('btn-success');
+            updateMainButton(true, "Processing...", 'btn-primary');
         } else if (allConverted) {
-            el.btnAll.disabled = false;
-            el.btnAll.innerText = "Download All (ZIP)";
-            el.btnAll.classList.add('btn-success');
-            el.btnAll.onclick = downloadAllZip;
+            updateMainButton(false, "Download All (ZIP)", 'btn-success', downloadAllZip);
         } else {
-            el.btnAll.disabled = pendingCount === 0;
-            el.btnAll.innerText = "Convert All";
-            el.btnAll.classList.remove('btn-success');
-            el.btnAll.onclick = convertAllSequence;
+            updateMainButton(pendingCount === 0, "Convert All", 'btn-primary', convertAllSequence);
         }
     }
 
-    // --- ARCHIVOS ---
+    function updateMainButton(disabled, text, className, clickHandler = null) {
+        DOM.btnAll.disabled = disabled;
+        DOM.btnAll.innerText = text;
+        DOM.btnAll.className = `btn-primary ${className}`;
+        DOM.btnAll.onclick = clickHandler;
+    }
+
+    // --- MANEJO DE ARCHIVOS ---
     function addFiles(files) {
         Array.from(files).forEach(f => {
             if (f.type.startsWith('image/')) {
@@ -109,30 +102,36 @@ document.addEventListener('DOMContentLoaded', () => {
         render();
     }
 
+    // ⚡ FIX MEMORY LEAK: Liberar memoria del navegador al eliminar archivo
     window.removeFile = (index) => {
+        if (fileQueue[index].url) URL.revokeObjectURL(fileQueue[index].url);
         fileQueue.splice(index, 1);
         render();
     };
 
-    el.clear.onclick = () => {
-        fileQueue = [];
+    // ⚡ FIX MEMORY LEAK: Liberar toda la memoria al limpiar
+    DOM.clear.onclick = () => {
+        fileQueue.forEach(item => {
+            if (item.url) URL.revokeObjectURL(item.url);
+        });
+        fileQueue =[];
         render();
     };
 
-    // --- API HELPER ---
+    // --- API CALL ---
     async function convertApi(file) {
         const fd = new FormData();
         fd.append("files", file);
-        fd.append("quality", el.quality.value);
+        fd.append("quality", DOM.quality.value);
+        
         const res = await fetch('/api/convert', { method: 'POST', body: fd });
-        if (!res.ok) throw new Error("Err");
+        if (!res.ok) throw new Error("Server error");
         return await res.blob();
     }
 
-    // --- HELPER PARA PROCESAR ITEM ESPECIFICO (Promesa) ---
     async function processItem(idx) {
         fileQueue[idx].status = 'loading';
-        render(); // Actualiza a spinner
+        render(); // Spinner
         try {
             const blob = await convertApi(fileQueue[idx].file);
             fileQueue[idx].blob = blob;
@@ -142,17 +141,15 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
             fileQueue[idx].status = 'error';
         }
-        // No llamamos a render() aquí para evitar parpadeos excesivos en el loop paralelo
     }
 
-    // --- PROCESO UNICO ---
     window.processOne = async (index) => {
         if (isProcessing) return;
         await processItem(index);
         render();
     };
 
-    // --- PROCESO PARALELO (BATCH DE 2) ---
+    // --- CONVERSIÓN EN LOTE (BATCH) ---
     async function convertAllSequence() {
         const indices = fileQueue.map((item, idx) => item.status === 'pending' ? idx : -1).filter(i => i !== -1);
         if (indices.length === 0) return;
@@ -163,36 +160,27 @@ document.addEventListener('DOMContentLoaded', () => {
         let completed = 0;
         const total = indices.length;
 
-        // BUCLE EN PASOS DE 2
-        for (let i = 0; i < indices.length; i += 2) {
-            const idx1 = indices[i];
-            const idx2 = indices[i+1]; // Puede ser undefined si es impar
-            
-            const batch = [processItem(idx1)];
-            if (idx2 !== undefined) {
-                batch.push(processItem(idx2));
-            }
+        // Bucle en lotes de 2 para no saturar la red del cliente
+        for (let i = 0; i < total; i += 2) {
+            const batch = [processItem(indices[i])];
+            if (i + 1 < total) batch.push(processItem(indices[i + 1]));
 
-            // Esperamos a que ambos terminen
             await Promise.all(batch);
             
-            // Actualizamos progreso
             completed += batch.length;
-            el.globalBar.style.width = `${(completed / total) * 100}%`;
-            
-            // Renderizamos estado actual
+            DOM.globalBar.style.width = `${(completed / total) * 100}%`;
             render();
             
-            // Pequeña pausa para no saturar UI
-            await new Promise(r => setTimeout(r, 20)); 
+            // Pausa microscópica para evitar congelar la UI
+            await new Promise(r => setTimeout(r, 10)); 
         }
 
         isProcessing = false;
-        setTimeout(() => { el.globalBar.style.width = '0%'; }, 500);
+        setTimeout(() => { DOM.globalBar.style.width = '0%'; }, 500);
         render();
-    };
+    }
 
-    // --- ZIP ---
+    // --- ZIP EXPORT ---
     async function downloadAllZip() {
         const zip = new JSZip();
         fileQueue.forEach(item => {
@@ -202,23 +190,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const content = await zip.generateAsync({type:"blob"});
         const url = URL.createObjectURL(content);
+        
         const a = document.createElement('a');
         a.href = url;
         a.download = "images_optimized.zip";
         a.click();
+        
+        // Liberar la memoria del zip después de descargar
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
-    // --- EVENTOS ---
-    el.drop.onclick = () => el.input.click();
-    el.input.onchange = (e) => { addFiles(e.target.files); el.input.value = ''; };
-    el.drop.ondragover = (e) => { e.preventDefault(); el.drop.style.borderColor = 'var(--primary)'; };
-    el.drop.ondragleave = () => { el.drop.style.borderColor = 'var(--border)'; };
-    el.drop.ondrop = (e) => { e.preventDefault(); el.drop.style.borderColor = 'var(--border)'; addFiles(e.dataTransfer.files); };
+    // --- EVENT LISTENERS ---
+    DOM.drop.onclick = () => DOM.input.click();
+    DOM.input.onchange = (e) => { addFiles(e.target.files); DOM.input.value = ''; };
+    
+    DOM.drop.ondragover = (e) => { 
+        e.preventDefault(); 
+        DOM.drop.style.borderColor = 'var(--primary)'; 
+    };
+    DOM.drop.ondragleave = () => { 
+        DOM.drop.style.borderColor = 'var(--border)'; 
+    };
+    DOM.drop.ondrop = (e) => { 
+        e.preventDefault(); 
+        DOM.drop.style.borderColor = 'var(--border)'; 
+        addFiles(e.dataTransfer.files); 
+    };
 
     window.addEventListener('paste', (e) => {
         const {items} = e.clipboardData;
-        const p = [];
-        for (let i=0; i<items.length; i++) {
+        const p =[];
+        for (let i = 0; i < items.length; i++) {
             if (items[i].type.indexOf("image") !== -1) {
                 const b = items[i].getAsFile();
                 if (!b.name || b.name === 'image.png') b.name = `pasted_${Date.now()}.png`;

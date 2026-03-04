@@ -4,53 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebP Speed Converter</title>
-    <link rel="stylesheet" href="/static/style.css?v=4">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Carga diferida de JSZip para que la página cargue más rápido -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+    <script src="/static/script.js" defer></script>
 </head>
-<!-- DARK MODE ACTIVADO POR DEFECTO AQUI -->
 <body data-theme="dark">
     
-    <div class="card">
+    <main class="card">
         <div class="progress-bar-wrapper">
             <div class="progress-bar-fill" id="globalBar"></div>
         </div>
 
-        <div class="header">
+        <header class="header">
             <h1>WebP Converter</h1>
-            <!-- Icono inicial cambiado a Sol porque empezamos en oscuro -->
-            <button id="themeToggle" class="theme-btn">☀️</button>
-        </div>
+            <button id="themeToggle" class="theme-btn" aria-label="Toggle Dark Mode">☀️</button>
+        </header>
 
-        <div class="upload-zone" id="dropZone">
+        <section class="upload-zone" id="dropZone">
             <div class="upload-text">
                 <span style="font-size: 24px;">📂</span>
                 <p>Click, Paste (Ctrl+V) or Drag Files</p>
             </div>
-            <input type="file" id="fileInput" accept="image/*" multiple>
-        </div>
+            <input type="file" id="fileInput" accept="image/*" multiple aria-label="Upload images">
+        </section>
 
-        <div class="controls">
+        <section class="controls">
             <div class="control-header">
-                <span>Quality</span>
+                <label for="quality">Quality</label>
                 <span id="qVal">80%</span>
             </div>
             <input type="range" id="quality" min="10" max="100" value="80">
-        </div>
+        </section>
 
-        <div class="list-actions">
+        <section class="list-actions">
             <span id="fileCount">0 Files</span>
             <button id="clearAll" class="btn-text-danger">Clear All</button>
-        </div>
+        </section>
         
         <div class="file-list" id="fileList">
             <div class="empty-msg">No files selected</div>
         </div>
 
-        <div class="footer">
+        <footer class="footer">
             <button id="btnConvertAll" class="btn-primary" disabled>Convert All</button>
-        </div>
-    </div>
+        </footer>
+    </main>
 
-    <script src="/static/script.js?v=4"></script>
 </body>
 </html>
